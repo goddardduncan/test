@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sort It Out! ♻️</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden; /* Prevent scrolling on iPad */
+        }
+        
+        /* Main Container for the Game Columns */
+        #game-area {
+            flex-grow: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Column Styling (Drop Targets) */
+        .column {
+            flex: 1;
+            background-color: #fff;
+            border: 5px solid #ccc;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background-color 0.3s; /* For correct flash feedback */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-height: 80%; /* Ensure columns fill most of the space */
+        }
+        
+        /* Column Headings for Pre-Readers */
+        .column h2 {
+            font-size: 2.5em; /* Large text */
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #eee;
+            width: 100%;
+        }
+
+        /* Specific Column Colors */
+        .column.recyclable { border-color: #007bff; } /* Blue */
+        .column.garden { border-color: #28a745; }    /* Green */
+        .column.general { border-color: #6c757d; }   /* Grey */
+
+        /* Side Panel for Draggable Items */
+        #draggable-items-panel {
+            width: 150px;
+            background-color: #e9ecef;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            border-right: 2px solid #ccc;
+        }
+
+        /* Draggable Item Styles (The Emojis) */
+        .drag-item {
+            cursor: grab;
+            font-size: 4em; /* Very large emoji size */
+            background: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s;
+            touch-action: none; /* Crucial for better touch dragging on iPad */
+            line-height: 1; /* Keep emoji centered */
+        }
+        
+        /* Draggable Item State */
+        .dragging {
+            opacity: 0.7;
+            transform: scale(1.1);
+            z-index: 1000;
+        }
+
+        /* Feedback Class: Flash Green (Correct) */
+        .flash-correct {
+            animation: flashGreen 0.3s ease-in-out;
+        }
+        @keyframes flashGreen {
+            0% { background-color: #a3ffc7; }
+            100% { background-color: #fff; }
+        }
+
+        /* Feedback Class: Shake (Incorrect) */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        .shake-bounce {
+            animation: shake 0.5s;
+            border: 3px solid red !important; /* Visual error cue */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="draggable-items-panel">
+        <h2>Items</h2>
+        </div>
+
+    <div id="game-area">
+        <div id="recyclable" class="column recyclable" data-category="recyclable">
+            <h2>Recyclable ♻️</h2>
+        </div>
+
+        <div id="garden" class="column garden" data-category="garden">
+            <h2>Garden Waste 🌿</h2>
+        </div>
+
+        <div id="general" class="column general" data-category="general">
+            <h2>General Waste 🗑️</h2>
+        </div>
+    </div>
+
+    <script>
+        const materials = {
+            '🧴': 'recyclable',
+            '📰': 'recyclable',
+            '🍎': 'garden',
+            '🍌': 'garden',
+            '🍁': 'garden',
+            '🧦': 'general',
+            '🤧': 'general'
+        };
+
+        const panel = document.getElementById('draggable-items-panel');
+        const columns = document.querySelectorAll('.column');
+
+        // 1. Setup: Create and shuffle the drag items
+        function createAndShuffleItems() {
+            let itemElements = [];
+            for (const [emoji, category] of Object.entries(materials)) {
+                const div = document.createElement('div');
+                div.className = 'drag-item';
+                div.textContent = emoji;
+                div.draggable = true;
+                div.dataset.category = category;
+                itemElements.push(div);
+            }
+            
+            // Simple Shuffle
+            for (let i = itemElements.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [itemElements[i], itemElements[j]] = [itemElements[j], itemElements[i]];
+            }
+
+            itemElements.forEach(item => panel.appendChild(item));
+        }
+
+        // 2. Drag Start/End/Over Logic
+        let draggedItem = null;
+
+        document.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('drag-item')) {
+                draggedItem = e.target;
+                e.target.classList.add('dragging');
+                // Set the data for transfer (optional, but good practice)
+                e.dataTransfer.setData('text/plain', e.target.dataset.category);
+            }
+        });
+
+        document.addEventListener('dragend', (e) => {
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }
+        });
+
+        columns.forEach(column => {
+            column.addEventListener('dragover', (e) => {
+                e.preventDefault(); // Allows the drop
+            });
+
+            // 3. Drop Logic
+            column.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (!draggedItem) return;
+
+                const correctCategory = draggedItem.dataset.category;
+                const targetCategory = column.dataset.category;
+
+                if (correctCategory === targetCategory) {
+                    // Correct Drop!
+                    
+                    // Flash green
+                    column.classList.add('flash-correct');
+                    setTimeout(() => column.classList.remove('flash-correct'), 300);
+
+                    // Move item permanently to the column
+                    column.appendChild(draggedItem);
+                    draggedItem.draggable = false; // Item is now sorted
+                    draggedItem.style.cursor = 'default';
+                    draggedItem.classList.remove('dragging');
+                    draggedItem = null; // Clear the dragged item
+                } else {
+                    // Incorrect Drop!
+                    
+                    // Shake and bounce back
+                    draggedItem.classList.add('shake-bounce');
+                    setTimeout(() => {
+                        draggedItem.classList.remove('shake-bounce');
+                        // Ensure it visually returns to the panel
+                        // The 'dragend' event handles the item position visually 
+                        // if the drop isn't accepted (which it isn't here)
+                    }, 500);
+                }
+            });
+        });
+
+
+        // 4. TOUCH SUPPORT (Crucial for iPad/Mobile)
+        // Simple touch implementation: item follows finger, then attempts drop on touchend
+        let currentTouchItem = null;
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.target.classList.contains('drag-item')) {
+                currentTouchItem = e.target;
+                currentTouchItem.classList.add('dragging');
+                
+                // Stop default scrolling/zoom
+                e.preventDefault(); 
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            if (currentTouchItem) {
+                // Move the item to the touch location
+                const touch = e.touches[0];
+                currentTouchItem.style.position = 'absolute';
+                currentTouchItem.style.left = (touch.pageX - currentTouchItem.offsetWidth / 2) + 'px';
+                currentTouchItem.style.top = (touch.pageY - currentTouchItem.offsetHeight / 2) + 'px';
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            if (!currentTouchItem) return;
+
+            const finalTouch = e.changedTouches[0];
+            const dropTarget = document.elementFromPoint(finalTouch.clientX, finalTouch.clientY);
+            let droppedSuccessfully = false;
+
+            if (dropTarget && dropTarget.classList.contains('column')) {
+                const correctCategory = currentTouchItem.dataset.category;
+                const targetCategory = dropTarget.dataset.category;
+
+                if (correctCategory === targetCategory) {
+                    // Correct Drop (Touch)
+                    dropTarget.classList.add('flash-correct');
+                    setTimeout(() => dropTarget.classList.remove('flash-correct'), 300);
+
+                    dropTarget.appendChild(currentTouchItem);
+                    currentTouchItem.style.position = 'static'; // Return to normal flow
+                    currentTouchItem.draggable = false;
+                    currentTouchItem.style.cursor = 'default';
+                    droppedSuccessfully = true;
+                }
+            }
+
+            if (!droppedSuccessfully) {
+                 // Incorrect Drop (Touch) - Shake and bounce back to panel
+                currentTouchItem.classList.add('shake-bounce');
+                setTimeout(() => {
+                    currentTouchItem.classList.remove('shake-bounce');
+                    // Reset position back to the panel
+                    currentTouchItem.style.position = 'static';
+                    currentTouchItem.style.left = '';
+                    currentTouchItem.style.top = '';
+                    panel.appendChild(currentTouchItem); // Put it back in the list
+                }, 500);
+            }
+
+            currentTouchItem.classList.remove('dragging');
+            currentTouchItem = null;
+        });
+
+
+        // Initialize the game
+        createAndShuffleItems();
+    </script>
+</body>
+</html>
