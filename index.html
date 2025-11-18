@@ -1,297 +1,349 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sort It Out! ♻️</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DJ Control</title>
     <style>
-        /* General Styles */
+        :root {
+            --color-bg-dark: #121212; 
+            --color-bg-card: #1e1e1e; 
+            --color-text-light: #e0e0e0;
+            --color-accent: #6cf; 
+            --color-primary-action: #f63; 
+            --spacing-unit: 0.75rem;
+            --border-radius: 0.5rem;
+        }
+
         body {
-            font-family: sans-serif;
+            background: var(--color-bg-dark);
+            color: var(--color-text-light);
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
             margin: 0;
-            padding: 0;
-            background-color: #f0f0f0;
+            padding: 2rem 1rem;
             display: flex;
-            height: 100vh;
-            overflow: hidden; /* Prevent scrolling on iPad */
-        }
-        
-        /* Main Container for the Game Columns */
-        #game-area {
-            flex-grow: 1;
-            display: flex;
-            padding: 20px;
-            gap: 20px;
+            justify-content: center; 
         }
 
-        /* Column Styling (Drop Targets) */
-        .column {
-            flex: 1;
-            background-color: #fff;
-            border: 5px solid #ccc;
-            border-radius: 15px;
-            padding: 15px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: background-color 0.3s; /* For correct flash feedback */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            min-height: 80%; /* Ensure columns fill most of the space */
-        }
-        
-        /* Column Headings for Pre-Readers */
-        .column h2 {
-            font-size: 2.5em; /* Large text */
-            margin-top: 0;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #eee;
+        .container {
             width: 100%;
+            max-width: 700px;
         }
 
-        /* Specific Column Colors */
-        .column.recyclable { border-color: #007bff; } /* Blue */
-        .column.garden { border-color: #28a745; }    /* Green */
-        .column.general { border-color: #6c757d; }   /* Grey */
+        h1 {
+            color: var(--color-accent);
+            margin: 0 0 1.5rem;
+            text-align: center;
+            font-size: 1.8rem;
+        }
 
-        /* Side Panel for Draggable Items */
-        #draggable-items-panel {
-            width: 150px;
-            background-color: #e9ecef;
-            padding: 20px 10px;
+        .mono {
+            font-variant-numeric: tabular-nums;
+            font-size: 0.95rem;
+        }
+        .group-label {
+            font-weight: 600;
+            color: #999;
+            margin-right: var(--spacing-unit);
+            white-space: nowrap;
+        }
+
+        .row {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 20px;
-            border-right: 2px solid #ccc;
+            gap: var(--spacing-unit);
+            flex-wrap: wrap;
+            padding: var(--spacing-unit);
+            background: var(--color-bg-card);
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
         }
 
-        /* Draggable Item Styles (The Emojis) */
-        .drag-item {
-            cursor: grab;
-            font-size: 4em; /* Very large emoji size */
-            background: #fff;
-            padding: 10px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: transform 0.1s;
-            touch-action: none; /* Crucial for better touch dragging on iPad */
-            line-height: 1; /* Keep emoji centered */
+        hr {
+            border: none;
+            height: 1px;
+            background-color: #333;
+            margin: 1.5rem 0;
+        }
+
+        button {
+            background: var(--color-accent);
+            color: #000;
+            font-weight: 700;
+            border: 0;
+            padding: 0.6rem 1rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s, transform 0.1s;
+            flex-shrink: 0; 
+        }
+
+        button:hover {
+            background: #99e6ff; 
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+
+        #castButton {
+            background: var(--color-primary-action);
+            color: var(--color-bg-dark);
+        }
+        #castButton:hover {
+            background: #ff8855;
+        }
+
+        #urlInput {
+            flex-grow: 1;
+            min-width: 250px;
+            padding: 0.6rem var(--spacing-unit);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--color-accent);
+            background: var(--color-bg-dark);
+            color: var(--color-text-light);
+            font-size: 1rem;
+        }
+        #urlInput::placeholder {
+            color: #888;
+        }
+
+        #state {
+            opacity: 0.8;
+            padding: 0 var(--spacing-unit);
+            margin-top: 0.5rem;
+        }
+
+        #slider {
+            flex-grow: 1;
+            height: 10px;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+        }
+
+        #slider::-webkit-slider-runnable-track {
+            background: #444;
+            height: 4px;
+            border-radius: 2px;
         }
         
-        /* Draggable Item State */
-        .dragging {
-            opacity: 0.7;
-            transform: scale(1.1);
-            z-index: 1000;
+        #slider::-moz-range-track {
+            background: #444;
+            height: 4px;
+            border-radius: 2px;
         }
 
-        /* Feedback Class: Flash Green (Correct) */
-        .flash-correct {
-            animation: flashGreen 0.3s ease-in-out;
-        }
-        @keyframes flashGreen {
-            0% { background-color: #a3ffc7; }
-            100% { background-color: #fff; }
+        #slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--color-accent);
+            cursor: pointer;
+            margin-top: -6px; 
+            box-shadow: 0 0 2px rgba(0,0,0,0.5);
         }
 
-        /* Feedback Class: Shake (Incorrect) */
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-5px); }
-            40%, 80% { transform: translateX(5px); }
-        }
-        .shake-bounce {
-            animation: shake 0.5s;
-            border: 3px solid red !important; /* Visual error cue */
+        #slider::-moz-range-thumb {
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--color-accent);
+            cursor: pointer;
+            border: none;
         }
 
     </style>
 </head>
 <body>
+<div class="container">
 
-    <div id="draggable-items-panel">
-        <h2>Items</h2>
-        </div>
-
-    <div id="game-area">
-        <div id="recyclable" class="column recyclable" data-category="recyclable">
-            <h2>Recyclable ♻️</h2>
-        </div>
-
-        <div id="garden" class="column garden" data-category="garden">
-            <h2>Garden Waste 🌿</h2>
-        </div>
-
-        <div id="general" class="column general" data-category="general">
-            <h2>General Waste 🗑️</h2>
-        </div>
+    <div class="row">
+        <button id="pl_prev">⏮️ Prev</button>
+        <button id="seek_back">⏪ -60s</button>
+        <button id="playpause">▶️ / ⏸️</button>
+        <button id="stop" style="display: none;">⏹️</button>
+        <button id="seek_fwd">⏩ +60s</button>
+        <button id="pl_next">⏭️ Next</button>
     </div>
 
-    <script>
-        const materials = {
-            '🧴': 'recyclable',
-            '📰': 'recyclable',
-            '🍎': 'garden',
-            '🍌': 'garden',
-            '🍁': 'garden',
-            '🧦': 'general',
-            '🤧': 'general'
-        };
+    <div class="row">
+        <span class="group-label">Volume:</span>
+        <button id="mute">🔇 / 🔊 </button>
+        <button id="vol_up">⬆️ +10</button>
+        <button id="vol_down">⬇️ -10</button>
+    </div>
 
-        const panel = document.getElementById('draggable-items-panel');
-        const columns = document.querySelectorAll('.column');
+    <hr />
 
-        // 1. Setup: Create and shuffle the drag items
-        function createAndShuffleItems() {
-            let itemElements = [];
-            for (const [emoji, category] of Object.entries(materials)) {
-                const div = document.createElement('div');
-                div.className = 'drag-item';
-                div.textContent = emoji;
-                div.draggable = true;
-                div.dataset.category = category;
-                itemElements.push(div);
-            }
-            
-            // Simple Shuffle
-            for (let i = itemElements.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [itemElements[i], itemElements[j]] = [itemElements[j], itemElements[i]];
-            }
+    <div class="row">
+        <input type="text" id="urlInput" placeholder="Enter streaming URL (e.g., .m3u8, .mp4)..." />
+        <button id="castButton">CAST</button>
+    </div>
 
-            itemElements.forEach(item => panel.appendChild(item));
+    <hr />
+
+    <div class="row" style="gap:1rem;">
+        <input id="slider" type="range" min="0" max="0" value="0" step="1" />
+        <span class="mono" id="time">0:00 / 0:00</span>
+    </div>
+    <p id="state">Status: <strong style="color:red">Connecting...</strong></p>
+</div>
+
+
+<script>
+    // --- Element References ---
+    const playpauseBtn = document.getElementById('playpause');
+    const stopBtn = document.getElementById('stop');
+    const muteBtn = document.getElementById('mute');
+    const volUpBtn = document.getElementById('vol_up');
+    const volDownBtn = document.getElementById('vol_down');
+    const seekBackBtn = document.getElementById('seek_back');
+    const seekFwdBtn = document.getElementById('seek_fwd');
+    const plPrevBtn = document.getElementById('pl_prev');
+    const plNextBtn = document.getElementById('pl_next');
+
+    const slider = document.getElementById('slider');
+    const timeEl = document.getElementById('time');
+    const stateEl = document.querySelector('#state strong');
+
+    // References for the URL input and button
+    const urlInput = document.getElementById('urlInput');
+    const castButton = document.getElementById('castButton');
+
+    // --- State Variables ---
+    let duration = 0;
+    let dragging = false;
+    let dragTimeout = null;
+
+    // --- Constants ---
+    const SERVER_BASE = 'http://localhost:8070';
+
+    function fmt(sec) {
+        sec = Math.max(0, Math.floor(sec||0));
+        const m = Math.floor(sec/60);
+        const s = sec % 60;
+        return `${m}:${s.toString().padStart(2,'0')}`;
+    }
+
+    function sendCommand(path) {
+        return fetch(`${SERVER_BASE}${path}`, {method:'GET'})
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            })
+            .then(() => poll()) // Poll the new status after successful command
+            .catch(error => {
+                console.error('Command failed:', error);
+                stateEl.textContent = 'Command Failed';
+            });
+    }
+
+    function castUrl() {
+        const url = urlInput.value.trim();
+        if (!url) {
+            alert("Please enter a URL.");
+            return;
         }
 
-        // 2. Drag Start/End/Over Logic
-        let draggedItem = null;
+        stateEl.textContent = `Loading: ${url.substring(0, 50)}...`; 
+        stateEl.style.color = '#ff6633'; // Orange for loading
 
-        document.addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('drag-item')) {
-                draggedItem = e.target;
-                e.target.classList.add('dragging');
-                // Set the data for transfer (optional, but good practice)
-                e.dataTransfer.setData('text/plain', e.target.dataset.category);
-            }
-        });
-
-        document.addEventListener('dragend', (e) => {
-            if (draggedItem) {
-                draggedItem.classList.remove('dragging');
-                draggedItem = null;
-            }
-        });
-
-        columns.forEach(column => {
-            column.addEventListener('dragover', (e) => {
-                e.preventDefault(); // Allows the drop
+        // Sends a GET request 
+        sendCommand(`/${url}`)
+            .then(() => {
+                console.log(`Attempted to load raw URL: ${url}`);
+            })
+            .catch(error => {
+                console.error('Load URL failed:', error);
+                stateEl.textContent = 'Load URL Failed';
             });
+    }
 
-            // 3. Drop Logic
-            column.addEventListener('drop', (e) => {
-                e.preventDefault();
-                if (!draggedItem) return;
+    async function poll() {
+        try {
+            // Fetch current time-pos (/elapsed) and duration
+            const [elapsedRes, durationRes] = await Promise.all([
+                fetch(`${SERVER_BASE}/elapsed`),
+                fetch(`${SERVER_BASE}/duration`)
+            ]);
 
-                const correctCategory = draggedItem.dataset.category;
-                const targetCategory = column.dataset.category;
+            const elapsedText = await elapsedRes.text();
+            const durationText = await durationRes.text();
 
-                if (correctCategory === targetCategory) {
-                    // Correct Drop!
-                    
-                    // Flash green
-                    column.classList.add('flash-correct');
-                    setTimeout(() => column.classList.remove('flash-correct'), 300);
+            const currentTime = parseFloat(elapsedText) || 0;
+            duration = parseFloat(durationText) || 0;
 
-                    // Move item permanently to the column
-                    column.appendChild(draggedItem);
-                    draggedItem.draggable = false; // Item is now sorted
-                    draggedItem.style.cursor = 'default';
-                    draggedItem.classList.remove('dragging');
-                    draggedItem = null; // Clear the dragged item
-                } else {
-                    // Incorrect Drop!
-                    
-                    // Shake and bounce back
-                    draggedItem.classList.add('shake-bounce');
-                    setTimeout(() => {
-                        draggedItem.classList.remove('shake-bounce');
-                        // Ensure it visually returns to the panel
-                        // The 'dragend' event handles the item position visually 
-                        // if the drop isn't accepted (which it isn't here)
-                    }, 500);
-                }
-            });
-        });
+            stateEl.textContent = 'Online';
+            stateEl.style.color = 'lightgreen';
 
+            // Update slider and time display
+            slider.max = duration;
 
-        // 4. TOUCH SUPPORT (Crucial for iPad/Mobile)
-        // Simple touch implementation: item follows finger, then attempts drop on touchend
-        let currentTouchItem = null;
-
-        document.addEventListener('touchstart', (e) => {
-            if (e.target.classList.contains('drag-item')) {
-                currentTouchItem = e.target;
-                currentTouchItem.classList.add('dragging');
-                
-                // Stop default scrolling/zoom
-                e.preventDefault(); 
-            }
-        }, { passive: false });
-
-        document.addEventListener('touchmove', (e) => {
-            if (currentTouchItem) {
-                // Move the item to the touch location
-                const touch = e.touches[0];
-                currentTouchItem.style.position = 'absolute';
-                currentTouchItem.style.left = (touch.pageX - currentTouchItem.offsetWidth / 2) + 'px';
-                currentTouchItem.style.top = (touch.pageY - currentTouchItem.offsetHeight / 2) + 'px';
-            }
-        }, { passive: false });
-
-        document.addEventListener('touchend', (e) => {
-            if (!currentTouchItem) return;
-
-            const finalTouch = e.changedTouches[0];
-            const dropTarget = document.elementFromPoint(finalTouch.clientX, finalTouch.clientY);
-            let droppedSuccessfully = false;
-
-            if (dropTarget && dropTarget.classList.contains('column')) {
-                const correctCategory = currentTouchItem.dataset.category;
-                const targetCategory = dropTarget.dataset.category;
-
-                if (correctCategory === targetCategory) {
-                    // Correct Drop (Touch)
-                    dropTarget.classList.add('flash-correct');
-                    setTimeout(() => dropTarget.classList.remove('flash-correct'), 300);
-
-                    dropTarget.appendChild(currentTouchItem);
-                    currentTouchItem.style.position = 'static'; // Return to normal flow
-                    currentTouchItem.draggable = false;
-                    currentTouchItem.style.cursor = 'default';
-                    droppedSuccessfully = true;
-                }
+            // ONLY update the slider's value if the user is NOT dragging it
+            if (!dragging) {
+                slider.value = Math.floor(currentTime);
+                timeEl.textContent = `${fmt(slider.value)} / ${fmt(duration)}`;
             }
 
-            if (!droppedSuccessfully) {
-                 // Incorrect Drop (Touch) - Shake and bounce back to panel
-                currentTouchItem.classList.add('shake-bounce');
-                setTimeout(() => {
-                    currentTouchItem.classList.remove('shake-bounce');
-                    // Reset position back to the panel
-                    currentTouchItem.style.position = 'static';
-                    currentTouchItem.style.left = '';
-                    currentTouchItem.style.top = '';
-                    panel.appendChild(currentTouchItem); // Put it back in the list
-                }, 500);
-            }
+        } catch (e) {
+            // If the server is down or the request fails
+            stateEl.textContent = 'OFFLINE';
+            stateEl.style.color = 'red';
+            // Reset duration when offline
+            duration = 0;
+            slider.max = 0;
+            timeEl.textContent = '0:00 / 0:00';
+        }
+    }
 
-            currentTouchItem.classList.remove('dragging');
-            currentTouchItem = null;
-        });
+    castButton.onclick = castUrl;
+
+    urlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            castUrl();
+        }
+    });
 
 
-        // Initialize the game
-        createAndShuffleItems();
-    </script>
+    // Basic Playback Commands
+    playpauseBtn.onclick = () => sendCommand('/pause');
+    stopBtn.onclick = () => sendCommand('/quit');
+    muteBtn.onclick = () => sendCommand('/mute');
+
+    // Volume Commands
+    volUpBtn.onclick = () => sendCommand('/volume/10');
+    volDownBtn.onclick = () => sendCommand('/volume/-10');
+
+    // Seek Relative Commands
+    seekBackBtn.onclick = () => sendCommand('/seek_rel/-60');
+    seekFwdBtn.onclick = () => sendCommand('/seek_rel/60');
+
+    // Playlist Commands
+    plPrevBtn.onclick = () => sendCommand('/playlist/prev');
+    plNextBtn.onclick = () => sendCommand('/playlist/next');
+
+    slider.addEventListener('input', () => {
+        dragging = true;
+        clearTimeout(dragTimeout);
+        timeEl.textContent = `${fmt(slider.value)} / ${fmt(duration)}`;
+    });
+
+    slider.addEventListener('change', () => {
+        const seekTime = slider.value;
+        // Use the new /seek_abs/ endpoint for the slider
+        fetch(`${SERVER_BASE}/seek_abs/${seekTime}`)
+            .then(() => {
+                // Wait 1 second after seek command before allowing poll to update slider
+                dragTimeout = setTimeout(() => dragging = false, 1000);
+            }).catch(() => dragging = false);
+    });
+
+    poll();
+    // Poll status every 2 seconds
+    setInterval(poll, 2000);
+</script>
 </body>
 </html>
