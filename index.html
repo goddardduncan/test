@@ -4,43 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RAPT Pill | Pro Station</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     
     <style>
-        :root { --kl-red: #e30613; --kl-dark: #1a1a1a; --kl-grey: #2d2d2d; --kl-text: #ffffff; --kl-muted: #a0a0a0; }
-        body { font-family: 'Roboto', sans-serif; background: var(--kl-dark); margin: 0; padding: 15px; color: var(--kl-text); display: flex; flex-direction: column; align-items: center; }
+        :root { 
+            --kl-red: #e30613; 
+            --kl-blue: #3498db;
+            --kl-dark: #1a1a1a; 
+            --kl-grey: #2d2d2d; 
+            --kl-text: #ffffff; 
+            --kl-muted: #a0a0a0; 
+        }
+        
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background: var(--kl-dark); 
+            margin: 0; padding: 15px; 
+            color: var(--kl-text); 
+            display: flex; flex-direction: column; align-items: center; 
+        }
+        
         .container { width: 100%; max-width: 800px; }
         
-        header { border-left: 4px solid var(--kl-red); padding-left: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start; }
+        header { 
+            border-left: 4px solid var(--kl-red); 
+            padding-left: 15px; margin-bottom: 15px; 
+            display: flex; justify-content: space-between; align-items: flex-start; 
+        }
+        
         .nav-controls { display: flex; gap: 8px; margin-bottom: 20px; width: 100%; }
         
-        .status-bar { background: var(--kl-grey); padding: 8px 15px; border-radius: 4px; font-size: 11px; margin-bottom: 15px; display: flex; justify-content: space-between; border: 1px solid #333; }
+        .status-bar { 
+            background: var(--kl-grey); padding: 8px 15px; border-radius: 4px; 
+            font-size: 11px; margin-bottom: 15px; display: flex; 
+            justify-content: space-between; border: 1px solid #333; 
+        }
+        
         .dot { height: 8px; width: 8px; background-color: #444; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .active .dot { background-color: var(--kl-red); box-shadow: 0 0 8px var(--kl-red); }
         
         #dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
         .card { background: var(--kl-grey); padding: 15px; border-radius: 8px; border-bottom: 3px solid #333; text-align: center; }
+        .card.grav { border-bottom: 3px solid var(--kl-red); }
+        .card.temp { border-bottom: 3px solid var(--kl-blue); }
+        
         .value { font-size: 24px; font-weight: 700; font-family: monospace; }
-        .label { font-size: 10px; color: var(--kl-red); text-transform: uppercase; font-weight: bold; }
+        .label { font-size: 10px; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; }
 
-        .chart-container { background: var(--kl-grey); padding: 15px; border-radius: 8px; margin-bottom: 15px; height: 250px; border: 1px solid #333; }
+        .chart-wrapper { position: relative; background: var(--kl-grey); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
+        .chart-container { height: 250px; }
+        .chart-title { position: absolute; top: 10px; left: 15px; font-size: 9px; font-weight: bold; color: var(--kl-muted); letter-spacing: 1px; z-index: 5; }
         
         button { flex: 1; padding: 12px 5px; font-size: 11px; cursor: pointer; border: none; border-radius: 4px; text-transform: uppercase; font-weight: bold; transition: 0.2s; }
         .btn-main { background: var(--kl-red); color: white; }
         .btn-sub { background: #444; color: white; }
         button:hover { filter: brightness(1.2); }
+        button:disabled { opacity: 0.5; cursor: default; }
 
-        /* Modals */
+        /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
         .modal-content { background: var(--kl-grey); margin: 5% auto; padding: 25px; border-radius: 8px; width: 350px; border: 1px solid var(--kl-red); overflow-y: auto; max-height: 85vh; }
         input, select { width: 100%; padding: 10px; margin: 10px 0; background: #111; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
-        
-        .setup-box { background: #111; padding: 12px; border-radius: 4px; margin: 15px 0; border-left: 3px solid #f39c12; font-size: 12px; line-height: 1.4; }
-        .copy-link { color: #3498db; cursor: pointer; text-decoration: underline; font-family: monospace; }
-
-        .history-list { max-height: 250px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444; background: #111; }
+        .setup-box { background: #111; padding: 12px; border-radius: 4px; margin: 15px 0; border-left: 3px solid #f39c12; font-size: 11px; line-height: 1.4; }
+        .copy-link { color: #3498db; cursor: pointer; text-decoration: underline; font-family: monospace; word-break: break-all; }
+        .history-list { max-height: 250px; overflow-y: auto; border: 1px solid #444; background: #111; }
         .history-item { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; }
         .history-item:hover { background: #222; color: var(--kl-red); }
     </style>
@@ -53,9 +83,7 @@
             <h1 style="margin:0; font-size: 22px; letter-spacing: 1px;">RAPT PILL</h1>
             <p id="brewNameDisplay" style="color:var(--kl-muted); font-size:12px; margin:0;">CURRENT BATCH</p>
         </div>
-        <div style="text-align: right;">
-            <div id="unitDisplay" style="font-size: 10px; color: var(--kl-red); font-weight: bold;">UNIT: SG</div>
-        </div>
+        <div style="text-align: right;"><div id="unitDisplay" style="font-size: 10px; color: var(--kl-red); font-weight: bold;">UNIT: SG</div></div>
     </header>
 
     <div class="nav-controls">
@@ -70,32 +98,35 @@
     </div>
 
     <div id="dashboard">
-        <div class="card"><div class="label">Gravity</div><div class="value"><span id="gVal">--</span></div></div>
-        <div class="card"><div class="label">Temp</div><div class="value"><span id="tVal">--</span><span style="font-size:12px">°C</span></div></div>
-        <div class="card"><div class="label">Battery</div><div class="value"><span id="bVal">--</span><span style="font-size:12px">%</span></div></div>
+        <div class="card grav"><div class="label" style="color:var(--kl-red)">Gravity</div><div class="value"><span id="gVal">--</span></div></div>
+        <div class="card temp"><div class="label" style="color:var(--kl-blue)">Temp</div><div class="value"><span id="tVal">--</span><span style="font-size:12px">°C</span></div></div>
+        <div class="card"><div class="label" style="color:var(--kl-muted)">Battery</div><div class="value"><span id="bVal">--</span><span style="font-size:12px">%</span></div></div>
     </div>
 
-    <div class="chart-container"><canvas id="gravChart"></canvas></div>
-    <div class="chart-container"><canvas id="tempChart"></canvas></div>
+    <div class="chart-wrapper">
+        <div class="chart-title">DENSITY TREND</div>
+        <div class="chart-container"><canvas id="gravChart"></canvas></div>
+    </div>
+    
+    <div class="chart-wrapper">
+        <div class="chart-title">THERMAL PROFILE</div>
+        <div class="chart-container"><canvas id="tempChart"></canvas></div>
+    </div>
 </div>
 
 <div id="settingsModal" class="modal">
     <div class="modal-content">
         <h3 style="margin:0 0 15px 0; color:var(--kl-red);">SETTINGS</h3>
-        
         <label>Display Units</label>
         <select id="unitSelect"><option value="SG">SG (Specific Gravity)</option><option value="Plato">Plato (°P)</option></select>
-        
         <label>Calibration Offset (SG)</label>
         <input type="number" id="offsetInput" step="0.0001">
-        
         <div class="setup-box">
             <strong style="color:#f39c12; display:block; margin-bottom:5px;">⚠️ CHROME SETUP REQUIRED</strong>
-            To enable Bluetooth scanning, copy and paste this link into your address bar:<br><br>
+            Copy and paste this link into your address bar:<br><br>
             <span class="copy-link" onclick="copySetupLink()">chrome://flags/#enable-experimental-web-platform-features</span>
-            <br><br>Set to <strong>Enabled</strong> and restart Chrome.
+            <br><br>Set to <strong>Enabled</strong> and restart.
         </div>
-        
         <button id="saveSettings" class="btn-main" style="width:100%; margin-bottom:10px;">Save Changes</button>
         <button onclick="archiveCurrentBrew()" style="background:none; border: 1px solid var(--kl-red); color:var(--kl-red); width:100%; margin-bottom:10px;">Archive & Reset</button>
         <button onclick="closeModals()" class="btn-sub" style="width:100%">Cancel</button>
@@ -178,7 +209,7 @@
 
     function copySetupLink() {
         const link = "chrome://flags/#enable-experimental-web-platform-features";
-        navigator.clipboard.writeText(link).then(() => alert("Link copied! Paste it into your browser address bar."));
+        navigator.clipboard.writeText(link).then(() => alert("Link copied! Paste it in your URL bar."));
     }
 
     document.getElementById('startBtn').onclick = async () => {
@@ -190,7 +221,6 @@
             document.getElementById('statusBox').classList.add('active');
             document.getElementById('statusText').innerText = "SCANNING";
             document.getElementById('startBtn').disabled = true;
-
             navigator.bluetooth.addEventListener('advertisementreceived', event => {
                 const mData = event.manufacturerData.get(16722);
                 if (mData && mData.byteLength === 23) {
@@ -206,7 +236,7 @@
                     logData(calSG, calPlato, parseFloat(tRaw));
                 }
             });
-        } catch (e) { alert("Bluetooth Error: Make sure Chrome flags are enabled."); }
+        } catch (e) { alert("Enable Chrome flags to use Bluetooth."); }
     };
 
     function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
@@ -217,7 +247,7 @@
     };
     document.getElementById('openHistory').onclick = () => {
         const list = document.getElementById('historyList');
-        list.innerHTML = history.length ? '' : '<div style="padding:15px; color:#666;">No archived brews.</div>';
+        list.innerHTML = history.length ? '' : '<div style="padding:15px; color:#666;">No archives.</div>';
         history.forEach((item, idx) => {
             const el = document.createElement('div'); el.className = 'history-item';
             el.innerHTML = `<span>${item.name}</span><small style="color:var(--kl-muted)">${new Date(item.date).toLocaleDateString()}</small>`;
