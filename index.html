@@ -13,7 +13,6 @@
         body { font-family: 'Roboto', sans-serif; background: var(--kl-dark); margin: 0; padding: 15px; color: var(--kl-text); display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 800px; }
         
-        /* Top Navigation Header */
         header { border-left: 4px solid var(--kl-red); padding-left: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start; }
         .nav-controls { display: flex; gap: 8px; margin-bottom: 20px; width: 100%; }
         
@@ -32,12 +31,15 @@
         .btn-main { background: var(--kl-red); color: white; }
         .btn-sub { background: #444; color: white; }
         button:hover { filter: brightness(1.2); }
-        button:disabled { opacity: 0.5; cursor: default; }
 
         /* Modals */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
-        .modal-content { background: var(--kl-grey); margin: 10% auto; padding: 25px; border-radius: 8px; width: 320px; border: 1px solid var(--kl-red); }
+        .modal-content { background: var(--kl-grey); margin: 5% auto; padding: 25px; border-radius: 8px; width: 350px; border: 1px solid var(--kl-red); overflow-y: auto; max-height: 85vh; }
         input, select { width: 100%; padding: 10px; margin: 10px 0; background: #111; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
+        
+        .setup-box { background: #111; padding: 12px; border-radius: 4px; margin: 15px 0; border-left: 3px solid #f39c12; font-size: 12px; line-height: 1.4; }
+        .copy-link { color: #3498db; cursor: pointer; text-decoration: underline; font-family: monospace; }
+
         .history-list { max-height: 250px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #444; background: #111; }
         .history-item { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; }
         .history-item:hover { background: #222; color: var(--kl-red); }
@@ -68,7 +70,7 @@
     </div>
 
     <div id="dashboard">
-        <div class="card"><div class="label" id="gLabel">Gravity</div><div class="value"><span id="gVal">--</span></div></div>
+        <div class="card"><div class="label">Gravity</div><div class="value"><span id="gVal">--</span></div></div>
         <div class="card"><div class="label">Temp</div><div class="value"><span id="tVal">--</span><span style="font-size:12px">°C</span></div></div>
         <div class="card"><div class="label">Battery</div><div class="value"><span id="bVal">--</span><span style="font-size:12px">%</span></div></div>
     </div>
@@ -80,11 +82,19 @@
 <div id="settingsModal" class="modal">
     <div class="modal-content">
         <h3 style="margin:0 0 15px 0; color:var(--kl-red);">SETTINGS</h3>
+        
         <label>Display Units</label>
         <select id="unitSelect"><option value="SG">SG (Specific Gravity)</option><option value="Plato">Plato (°P)</option></select>
+        
         <label>Calibration Offset (SG)</label>
         <input type="number" id="offsetInput" step="0.0001">
-        <p style="font-size: 10px; color: var(--kl-muted); margin-bottom: 20px;">Current Raw: <span id="currentRaw">1.0000</span></p>
+        
+        <div class="setup-box">
+            <strong style="color:#f39c12; display:block; margin-bottom:5px;">⚠️ CHROME SETUP REQUIRED</strong>
+            To enable Bluetooth scanning, copy and paste this link into your address bar:<br><br>
+            <span class="copy-link" onclick="copySetupLink()">chrome://flags/#enable-experimental-web-platform-features</span>
+            <br><br>Set to <strong>Enabled</strong> and restart Chrome.
+        </div>
         
         <button id="saveSettings" class="btn-main" style="width:100%; margin-bottom:10px;">Save Changes</button>
         <button onclick="archiveCurrentBrew()" style="background:none; border: 1px solid var(--kl-red); color:var(--kl-red); width:100%; margin-bottom:10px;">Archive & Reset</button>
@@ -112,44 +122,32 @@
 
     function initCharts() {
         const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             scales: {
                 x: { type: 'time', time: { unit: 'hour' }, grid: { color: '#333' }, ticks: { color: '#666' } },
                 y: { grid: { color: '#333' }, ticks: { color: '#aaa' } }
             },
             plugins: { legend: { display: false } }
         };
-
         gravChart = new Chart(document.getElementById('gravChart'), {
-            type: 'line',
-            data: { datasets: [{ label: 'Gravity', data: [], borderColor: '#e30613', tension: 0.3, pointRadius: 0, borderWidth: 2 }] },
+            type: 'line', data: { datasets: [{ label: 'Gravity', data: [], borderColor: '#e30613', tension: 0.3, pointRadius: 0, borderWidth: 2 }] },
             options: commonOptions
         });
-
         tempChart = new Chart(document.getElementById('tempChart'), {
-            type: 'line',
-            data: { datasets: [{ label: 'Temp', data: [], borderColor: '#3498db', tension: 0.3, pointRadius: 0, borderWidth: 2 }] },
+            type: 'line', data: { datasets: [{ label: 'Temp', data: [], borderColor: '#3498db', tension: 0.3, pointRadius: 0, borderWidth: 2 }] },
             options: commonOptions
         });
-        
         refreshCharts();
     }
 
     function refreshCharts() {
-        const gData = logs.map(l => ({ x: l.t, y: unit === 'SG' ? l.g : l.p }));
-        const tData = logs.map(l => ({ x: l.t, y: l.temp }));
-        
-        gravChart.data.datasets[0].data = gData;
-        tempChart.data.datasets[0].data = tData;
-        
-        gravChart.update();
-        tempChart.update();
+        gravChart.data.datasets[0].data = logs.map(l => ({ x: l.t, y: unit === 'SG' ? l.g : l.p }));
+        tempChart.data.datasets[0].data = logs.map(l => ({ x: l.t, y: l.temp }));
+        gravChart.update(); tempChart.update();
     }
 
     function logData(sg, pl, temp) {
         const now = Date.now();
-        // Log if 15 mins passed OR if it's the first log of the session
         if (now - lastLogTime > LOG_INTERVAL || lastLogTime === 0) {
             logs.push({ t: now, g: sg, p: pl, temp: temp });
             localStorage.setItem('rapt_current_logs', JSON.stringify(logs));
@@ -160,28 +158,27 @@
     }
 
     function archiveCurrentBrew() {
-        if (logs.length === 0) { alert("No data to archive."); return; }
+        if (logs.length === 0) return;
         const name = prompt("Enter Brew Name:", "Batch " + new Date().toLocaleDateString());
         if (!name) return;
-        
         history.push({ name: name, date: new Date().toISOString(), data: [...logs], unit: unit });
         localStorage.setItem('rapt_history', JSON.stringify(history));
-        
-        logs = [];
-        localStorage.setItem('rapt_current_logs', JSON.stringify(logs));
-        refreshCharts();
-        closeModals();
+        logs = []; localStorage.setItem('rapt_current_logs', JSON.stringify(logs));
+        refreshCharts(); closeModals();
         document.getElementById('brewNameDisplay').innerText = "CURRENT BATCH";
     }
 
     function viewHistoryItem(index) {
         const item = history[index];
-        logs = item.data;
-        unit = item.unit || 'SG';
+        logs = item.data; unit = item.unit || 'SG';
         document.getElementById('brewNameDisplay').innerText = "ARCHIVE: " + item.name;
         document.getElementById('unitDisplay').innerText = "UNIT: " + unit;
-        refreshCharts();
-        closeModals();
+        refreshCharts(); closeModals();
+    }
+
+    function copySetupLink() {
+        const link = "chrome://flags/#enable-experimental-web-platform-features";
+        navigator.clipboard.writeText(link).then(() => alert("Link copied! Paste it into your browser address bar."));
     }
 
     document.getElementById('startBtn').onclick = async () => {
@@ -201,51 +198,42 @@
                     const tRaw = (view.getUint16(9, false) / 128 - 273.15).toFixed(1);
                     const gRaw = (view.getFloat32(11, false) / 1000);
                     const bat = Math.round(view.getInt16(21, false) / 256);
-
                     const calSG = parseFloat((gRaw + offset).toFixed(4));
                     const calPlato = parseFloat(((-1*616.868) + (1111.14*calSG) - (630.272*Math.pow(calSG,2)) + (135.997*Math.pow(calSG,3))).toFixed(1));
-
                     document.getElementById('gVal').innerText = (unit === 'SG' ? calSG.toFixed(4) : calPlato);
                     document.getElementById('tVal').innerText = tRaw;
                     document.getElementById('bVal').innerText = bat;
-                    
                     logData(calSG, calPlato, parseFloat(tRaw));
                 }
             });
-        } catch (e) { console.log(e); }
+        } catch (e) { alert("Bluetooth Error: Make sure Chrome flags are enabled."); }
     };
 
     function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
-    
     document.getElementById('openSettings').onclick = () => {
         document.getElementById('offsetInput').value = offset;
         document.getElementById('unitSelect').value = unit;
         document.getElementById('settingsModal').style.display = 'block';
     };
-
     document.getElementById('openHistory').onclick = () => {
         const list = document.getElementById('historyList');
         list.innerHTML = history.length ? '' : '<div style="padding:15px; color:#666;">No archived brews.</div>';
         history.forEach((item, idx) => {
-            const el = document.createElement('div');
-            el.className = 'history-item';
+            const el = document.createElement('div'); el.className = 'history-item';
             el.innerHTML = `<span>${item.name}</span><small style="color:var(--kl-muted)">${new Date(item.date).toLocaleDateString()}</small>`;
             el.onclick = () => viewHistoryItem(idx);
             list.appendChild(el);
         });
         document.getElementById('historyModal').style.display = 'block';
     };
-
     document.getElementById('saveSettings').onclick = () => {
         offset = parseFloat(document.getElementById('offsetInput').value) || 0;
         unit = document.getElementById('unitSelect').value;
         localStorage.setItem('rapt_offset', offset);
         localStorage.setItem('rapt_unit', unit);
         document.getElementById('unitDisplay').innerText = "UNIT: " + unit;
-        refreshCharts();
-        closeModals();
+        refreshCharts(); closeModals();
     };
-
     window.onclick = (e) => { if (e.target.className === 'modal') closeModals(); };
     initCharts();
 </script>
