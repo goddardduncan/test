@@ -2,210 +2,112 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAPT Pill | Pro Station</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <title>Battery Logic Debugger</title>
     <style>
-        :root { --kl-red: #e30613; --kl-blue: #3498db; --kl-dark: #1a1a1a; --kl-grey: #2d2d2d; --kl-text: #ffffff; --kl-muted: #a0a0a0; }
-        body { font-family: 'Roboto', sans-serif; background: var(--kl-dark); margin: 0; padding: 15px; color: var(--kl-text); display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 800px; }
-        header { border-left: 4px solid var(--kl-red); padding-left: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .nav-controls { display: flex; gap: 8px; margin-bottom: 20px; width: 100%; }
-        .status-bar { background: var(--kl-grey); padding: 8px 15px; border-radius: 4px; font-size: 11px; margin-bottom: 15px; display: flex; justify-content: space-between; border: 1px solid #333; }
-        .dot { height: 8px; width: 8px; background-color: #444; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .active .dot { background-color: var(--kl-red); box-shadow: 0 0 8px var(--kl-red); }
-        #dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .card { background: var(--kl-grey); padding: 15px; border-radius: 8px; border-bottom: 3px solid #333; text-align: center; }
-        .card.grav { border-bottom: 3px solid var(--kl-red); }
-        .card.temp { border-bottom: 3px solid var(--kl-blue); }
-        .value { font-size: 24px; font-weight: 700; font-family: monospace; }
-        .label { font-size: 10px; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; }
-        .chart-wrapper { position: relative; background: var(--kl-grey); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
-        .chart-container { height: 250px; }
-        .chart-title { position: absolute; top: 10px; left: 15px; font-size: 9px; font-weight: bold; color: var(--kl-muted); letter-spacing: 1px; z-index: 5; }
-        button { flex: 1; padding: 12px 5px; font-size: 11px; cursor: pointer; border: none; border-radius: 4px; text-transform: uppercase; font-weight: bold; transition: 0.2s; }
-        .btn-main { background: var(--kl-red); color: white; }
-        .btn-sub { background: #444; color: white; }
-        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
-        .modal-content { background: var(--kl-grey); margin: 5% auto; padding: 25px; border-radius: 8px; width: 350px; border: 1px solid var(--kl-red); overflow-y: auto; max-height: 85vh; }
-        input, select { width: 100%; padding: 10px; margin: 10px 0; background: #111; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
-        .setup-box { background: #111; padding: 12px; border-radius: 4px; margin: 15px 0; border-left: 3px solid #f39c12; font-size: 11px; line-height: 1.4; }
-        .copy-link { color: #3498db; cursor: pointer; text-decoration: underline; font-family: monospace; word-break: break-all; }
-        .history-list { max-height: 250px; overflow-y: auto; border: 1px solid #444; background: #111; }
-        .history-item { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; }
-        .history-item:hover { background: #222; color: var(--kl-red); }
+        body { font-family: monospace; background: #1a1a1a; color: #00ff00; padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .test-card { border: 1px solid #333; padding: 15px; border-radius: 8px; background: #222; }
+        .test-num { color: #ff3e3e; font-weight: bold; }
+        .val { font-size: 24px; margin-top: 10px; color: #fff; }
+        .desc { font-size: 11px; color: #888; margin-top: 5px; }
+        button { background: #e30613; color: white; border: none; padding: 15px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
+        #raw-hex { background: #000; padding: 10px; margin-bottom: 20px; border: 1px solid #444; word-break: break-all; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <div><h1 style="margin:0; font-size: 22px; letter-spacing: 1px;">RAPT PILL</h1><p id="brewNameDisplay" style="color:var(--kl-muted); font-size:12px; margin:0;">STATION READY</p></div>
-        <div style="text-align: right;"><div id="unitDisplay" style="font-size: 10px; color: var(--kl-red); font-weight: bold;">UNIT: SG</div></div>
-    </header>
+    <h2>RAPT Battery Debug Suite</h2>
+    <button id="scanBtn">Start Debug Scan</button>
+    
+    <div id="raw-hex">Raw Payload (Hex): Waiting...</div>
 
-    <div class="nav-controls">
-        <button id="startBtn" class="btn-main">Scan Pill</button>
-        <button id="openSettings" class="btn-sub">Settings</button>
-        <button id="openHistory" class="btn-sub">History</button>
-    </div>
-
-    <div id="statusBox" class="status-bar">
-        <span><span class="dot"></span> <span id="statusText">IDLE</span></span>
-        <span id="lastUpdate" style="opacity: 0.5;">--:--:--</span>
-    </div>
-
-    <div id="dashboard">
-        <div class="card grav"><div class="label" style="color:var(--kl-red)">Gravity</div><div class="value"><span id="gVal">--</span></div></div>
-        <div class="card temp"><div class="label" style="color:var(--kl-blue)">Temp</div><div class="value"><span id="tVal">--</span><span style="font-size:12px">°C</span></div></div>
-        <div class="card"><div class="label" style="color:var(--kl-muted)">Battery</div><div class="value"><span id="bVal">--</span>%</div></div>
-    </div>
-
-    <div class="chart-wrapper"><div class="chart-title">DENSITY TREND</div><div class="chart-container"><canvas id="gravChart"></canvas></div></div>
-    <div class="chart-wrapper"><div class="chart-title">THERMAL PROFILE</div><div class="chart-container"><canvas id="tempChart"></canvas></div></div>
-</div>
-
-<div id="settingsModal" class="modal">
-    <div class="modal-content">
-        <h3 style="margin:0 0 15px 0; color:var(--kl-red);">SETTINGS</h3>
-        <label>Display Units</label>
-        <select id="unitSelect"><option value="SG">SG (Specific Gravity)</option><option value="Plato">Plato (°P)</option></select>
-        <label>Calibration Offset (SG)</label>
-        <input type="number" id="offsetInput" step="0.0001">
-        <div class="setup-box">
-            <strong style="color:#f39c12; display:block; margin-bottom:5px;">⚠️ CHROME SETUP</strong>
-            Copy/Paste to address bar:<br><br>
-            <span class="copy-link" onclick="copySetupLink()">chrome://flags/#enable-experimental-web-platform-features</span>
-            <br><br>Set to <strong>Enabled</strong> and restart.
+    <div class="grid" id="results">
         </div>
-        <button id="saveSettings" class="btn-main" style="width:100%; margin-bottom:10px;">Save Changes</button>
-        <button onclick="archiveCurrentBrew()" style="background:none; border: 1px solid var(--kl-red); color:var(--kl-red); width:100%; margin-bottom:10px;">Archive & Reset</button>
-        <button onclick="closeModals()" class="btn-sub" style="width:100%">Cancel</button>
-    </div>
-</div>
-
-<div id="historyModal" class="modal">
-    <div class="modal-content" style="width:350px">
-        <h3 style="margin:0 0 15px 0; color:var(--kl-red);">BREW HISTORY</h3>
-        <div id="historyList" class="history-list"></div>
-        <button onclick="closeModals()" class="btn-sub" style="width:100%">Close</button>
-    </div>
-</div>
 
 <script>
-    let logs = JSON.parse(localStorage.getItem('rapt_current_logs')) || [];
-    let history = JSON.parse(localStorage.getItem('rapt_history')) || [];
-    let offset = parseFloat(localStorage.getItem('rapt_offset')) || 0;
-    let unit = localStorage.getItem('rapt_unit') || 'SG';
-    let lastLogTime = 0;
-    const LOG_INTERVAL = 15 * 60 * 1000; 
+    const scanBtn = document.getElementById('scanBtn');
+    const resultsDiv = document.getElementById('results');
+    const rawDiv = document.getElementById('raw-hex');
 
-    let gravChart, tempChart;
+    const solutions = [
+        { id: 1, name: "The Standard", desc: "Int16 Big Endian / 256 (As per Python docs)" },
+        { id: 2, name: "The Unsigned", desc: "Uint16 / 256 (Ignores negative bit)" },
+        { id: 3, name: "The Little Endian", desc: "Int16 Little Endian / 256" },
+        { id: 4, name: "Byte Swap", desc: "Read index 22 then 21 manually" },
+        { id: 5, name: "Bit Shift Right", desc: "Int16 >> 8 (Extracting High Byte only)" },
+        { id: 6, name: "Direct Uint8", desc: "Reading index 21 as a single byte" },
+        { id: 7, name: "Voltage Map", desc: "Assuming raw is mV (e.g. 4200) -> 0-100%" },
+        { id: 8, name: "The Mask", desc: "Applying 0x00FF mask to Int16" },
+        { id: 9, name: "The Aggressive Clamp", desc: "Solution 1 but force 1-100 (Never 0)" }
+    ];
 
-    // RESTORED ORIGINAL SCAN LOGIC
-    document.getElementById('startBtn').onclick = async () => {
+    // Initialize UI
+    solutions.forEach(s => {
+        resultsDiv.innerHTML += `
+            <div class="test-card">
+                <div class="test-num">#${s.id} ${s.name}</div>
+                <div class="val" id="val-${s.id}">--%</div>
+                <div class="desc">${s.desc}</div>
+            </div>`;
+    });
+
+    scanBtn.onclick = async () => {
         try {
             const scan = await navigator.bluetooth.requestLEScan({
                 filters: [{ manufacturerData: [{ companyIdentifier: 16722 }] }],
                 keepRepeatedDevices: true
             });
 
-            document.getElementById('statusBox').classList.add('active');
-            document.getElementById('statusText').innerText = "SCANNING";
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('startBtn').innerText = "ACTIVE";
-
             navigator.bluetooth.addEventListener('advertisementreceived', event => {
                 const mData = event.manufacturerData.get(16722);
                 if (mData && mData.byteLength === 23) {
                     const view = new DataView(mData.buffer);
-                    const tRaw = (view.getUint16(9, false) / 128 - 273.15).toFixed(1);
-                    const gRaw = (view.getFloat32(11, false) / 1000);
-                    const bat = Math.min(100, Math.max(0, Math.round(view.getInt16(21, false) / 256)));
+                    const raw = Array.from(new Uint8Array(mData.buffer)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                    rawDiv.innerText = `Raw Payload: ${raw}`;
 
-                    const calSG = parseFloat((gRaw + offset).toFixed(4));
-                    const calPlato = parseFloat(((-1*616.868) + (1111.14*calSG) - (630.272*Math.pow(calSG,2)) + (135.997*Math.pow(calSG,3))).toFixed(1));
+                    const b_int16_be = view.getInt16(21, false);
+                    const b_uint16_be = view.getUint16(21, false);
+                    const b_int16_le = view.getInt16(21, true);
 
-                    document.getElementById('gVal').innerText = (unit === 'SG' ? calSG.toFixed(4) : calPlato);
-                    document.getElementById('tVal').innerText = tRaw;
-                    document.getElementById('bVal').innerText = bat;
+                    // #1 Standard
+                    update(1, Math.round(b_int16_be / 256));
                     
-                    const now = Date.now();
-                    if (now - lastLogTime > LOG_INTERVAL || lastLogTime === 0) {
-                        logs.push({ t: now, g: calSG, p: calPlato, temp: parseFloat(tRaw) });
-                        localStorage.setItem('rapt_current_logs', JSON.stringify(logs));
-                        lastLogTime = now;
-                        refreshCharts();
-                    }
-                    document.getElementById('lastUpdate').innerText = new Date().toLocaleTimeString();
+                    // #2 Unsigned
+                    update(2, Math.round(b_uint16_be / 256));
+                    
+                    // #3 Little Endian
+                    update(3, Math.round(b_int16_le / 256));
+
+                    // #4 Byte Swap
+                    const swapped = (view.getUint8(22) << 8) | view.getUint8(21);
+                    update(4, Math.round(swapped / 256));
+
+                    // #5 Shift
+                    update(5, b_int16_be >> 8);
+
+                    // #6 Direct Byte
+                    update(6, view.getUint8(21));
+
+                    // #7 Voltage Assumption (Assuming 3000mv - 4200mv range)
+                    const v = b_int16_be;
+                    let pct = ((v - 3000) / (4200 - 3000)) * 100;
+                    update(7, v > 100 ? Math.round(pct) : "Range Err");
+
+                    // #8 Mask
+                    update(8, (b_int16_be & 0x00FF));
+
+                    // #9 Aggressive Clamp
+                    let c = Math.round(b_int16_be / 256);
+                    update(9, c <= 0 ? "FORCE 1" : c);
                 }
             });
-        } catch (e) { 
-            alert("Bluetooth Error: " + e.message + "\n\n1. Use HTTPS or localhost.\n2. Ensure Chrome Flags are Enabled."); 
-        }
+        } catch (e) { alert(e); }
     };
 
-    function initCharts() {
-        const cfg = { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'time', time: { unit: 'hour' }, grid: { color: '#333' } }, y: { grid: { color: '#333' } } }, plugins: { legend: { display: false } } };
-        gravChart = new Chart(document.getElementById('gravChart'), { type: 'line', data: { datasets: [{ borderColor: '#e30613', data: [], tension: 0.3, pointRadius: 0, borderWidth: 2 }] }, options: cfg });
-        tempChart = new Chart(document.getElementById('tempChart'), { type: 'line', data: { datasets: [{ borderColor: '#3498db', data: [], tension: 0.3, pointRadius: 0, borderWidth: 2 }] }, options: cfg });
-        refreshCharts();
+    function update(id, val) {
+        const el = document.getElementById(`val-${id}`);
+        el.innerText = typeof val === 'number' ? val + "%" : val;
     }
-
-    function refreshCharts() {
-        gravChart.data.datasets[0].data = logs.map(l => ({ x: l.t, y: unit === 'SG' ? l.g : l.p }));
-        tempChart.data.datasets[0].data = logs.map(l => ({ x: l.t, y: l.temp }));
-        gravChart.update(); tempChart.update();
-    }
-
-    function copySetupLink() {
-        navigator.clipboard.writeText("chrome://flags/#enable-experimental-web-platform-features").then(() => alert("Link copied!"));
-    }
-
-    function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
-    document.getElementById('openSettings').onclick = () => {
-        document.getElementById('offsetInput').value = offset;
-        document.getElementById('unitSelect').value = unit;
-        document.getElementById('settingsModal').style.display = 'block';
-    };
-    document.getElementById('openHistory').onclick = () => {
-        const list = document.getElementById('historyList');
-        list.innerHTML = history.length ? '' : '<div style="padding:15px; color:#666;">No archives.</div>';
-        history.forEach((item, idx) => {
-            const el = document.createElement('div'); el.className = 'history-item';
-            el.innerHTML = `<span>${item.name}</span><small style="color:var(--kl-muted)">${new Date(item.date).toLocaleDateString()}</small>`;
-            el.onclick = () => viewHistoryItem(idx);
-            list.appendChild(el);
-        });
-        document.getElementById('historyModal').style.display = 'block';
-    };
-    document.getElementById('saveSettings').onclick = () => {
-        offset = parseFloat(document.getElementById('offsetInput').value) || 0;
-        unit = document.getElementById('unitSelect').value;
-        localStorage.setItem('rapt_offset', offset);
-        localStorage.setItem('rapt_unit', unit);
-        document.getElementById('unitDisplay').innerText = "UNIT: " + unit;
-        refreshCharts(); closeModals();
-    };
-    function archiveCurrentBrew() {
-        if (logs.length === 0) return;
-        const name = prompt("Enter Brew Name:", "Batch " + new Date().toLocaleDateString());
-        if (!name) return;
-        history.push({ name: name, date: new Date().toISOString(), data: [...logs], unit: unit });
-        localStorage.setItem('rapt_history', JSON.stringify(history));
-        logs = []; localStorage.setItem('rapt_current_logs', JSON.stringify(logs));
-        refreshCharts(); closeModals();
-    }
-    function viewHistoryItem(index) {
-        const item = history[index]; logs = item.data; unit = item.unit || 'SG';
-        document.getElementById('brewNameDisplay').innerText = "ARCHIVE: " + item.name;
-        document.getElementById('unitDisplay').innerText = "UNIT: " + unit;
-        refreshCharts(); closeModals();
-    }
-    window.onclick = (e) => { if (e.target.className === 'modal') closeModals(); };
-    initCharts();
 </script>
 </body>
 </html>
